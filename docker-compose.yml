@@ -1,0 +1,131 @@
+# Distributed Food Delivery Platform
+#
+#   docker compose up -d --build          bring everything up
+#   docker compose --profile tools up -d  add Kafka UI and Mongo Express
+#   docker compose logs -f order-service  follow one service
+#   docker compose down -v                tear down and wipe volumes
+#
+# Kafka runs in KRaft mode, so there is no ZooKeeper. The broker advertises
+# two listeners: `kafka:9092` for services inside the Compose network and
+# `localhost:29092` for anything running on the host.
+
+name: food-delivery-platform
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks: [platform]
+  depends_on:
+    kafka-init:
+      condition: service_completed_successfully
+    mongodb:
+      condition: service_healthy
+
+x-service-env: &service-env
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  MONGO_HOST: mongodb
+  MONGO_PORT: "27017"
+  MONGO_USER: ${MONGO_USER:-root}
+  MONGO_PASSWORD: ${MONGO_PASSWORD:-dsa612s}
+
+services:
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    networks: [platform]
+    ports:
+      - "29092:29092"
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka-init
+    networks: [platform]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./scripts/create-topics.sh:/create-topics.sh:ro
+    entrypoint: ["bash", "/create-topics.sh"]
+    environment:
+      BOOTSTRAP: kafka:9092
+
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    networks: [platform]
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-dsa612s}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # <<< service blocks are added here >>>
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    profiles: [tools]
+    networks: [platform]
+    ports: ["8080:8080"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: food-delivery
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: mongo-express
+    profiles: [tools]
+    networks: [platform]
+    ports: ["8090:8081"]
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-root}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-dsa612s}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD:-dsa612s}@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+
+networks:
+  platform:
+    driver: bridge
+
+volumes:
+  kafka-data:
+  mongo-data:
