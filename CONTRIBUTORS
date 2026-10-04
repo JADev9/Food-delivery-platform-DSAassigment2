@@ -1,0 +1,7 @@
+# One member per line: Full Name <github-email>   service(s) owned
+
+JADev9       <atletica714@gmail.com>            order-service
+emacoquela   <emacoquela@gmail.com>             delivery-service
+RudgerKoyo   <223094455@nust.na>                kafka-infrastructure, build-scripts
+Uutoni       <emiliauutoni4@gmail.com>          payment-service, customer-service
+Peuya-web    <helvipeuyoshingejonas@gmail.com>  restaurant-service, notification-service

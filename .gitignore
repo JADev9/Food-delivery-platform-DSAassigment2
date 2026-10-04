@@ -1,0 +1,73 @@
+# Ballerina
+target/
+Ballerina.lock
+*.balx
+dependency-graph.txt
+Config.toml
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Data volumes
+data/
+kafka-data/
+mongo-data/
+
+# Environment
+.env
+.env.*
+!.env.example
+config.local.toml
+secrets/
+*.pem
+*.key
+*.p12
+
+# IDE
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+.settings/
+.project
+.classpath
+nbproject/
+build/
+bin/
+out/
+
+# Java
+*.class
+hs_err_pid*
+replay_pid*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+
+# Temporary
+*.bak
+*.tmp
+*.swp
+*~
+*.orig
+*.rej
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Throwaway demo state
+scripts/.demo-ids
+
+# Coverage
+coverage/
+.nyc_output/
