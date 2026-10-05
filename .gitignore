@@ -71,3 +71,4 @@ scripts/.demo-ids
 # Coverage
 coverage/
 .nyc_output/
+*.pre-split
