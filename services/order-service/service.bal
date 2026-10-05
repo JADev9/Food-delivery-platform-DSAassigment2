@@ -3,21 +3,19 @@
 // The HTTP endpoints and the Kafka consumers both funnel state changes
 // through transition() in lifecycle.bal. An order cannot reach an illegal
 // state, no matter which path the request came in on.
+//
+// The consumer loops live in the order-consumer package, run as a separate
+// process. See docs/ARCHITECTURE.md for the reasoning.
 
 import ballerina/http;
 import ballerina/log;
 
 service /api/v1 on new http:Listener(SERVICE_PORT) {
 
-    // Liveness check. Used by the smoke test and by Docker Compose health
-    // checks once the service is under orchestration.
     resource function get health() returns json {
         return {status: "UP", 'service: SERVICE_NAME};
     }
 
-    // Places an order. Validates the request, computes the total server-side,
-    // persists the order in CREATED state, and publishes orders.created so
-    // the payment and notification services can react.
     resource function post orders(@http:Payload PlaceOrderRequest req) returns http:Created|http:BadRequest|http:UnprocessableEntity|http:InternalServerError {
         if req.items.length() == 0 {
             return <http:UnprocessableEntity>{
@@ -29,7 +27,9 @@ service /api/v1 on new http:Listener(SERVICE_PORT) {
         string orderId = newOrderId();
         Order fresh = newOrder(orderId, req, total);
 
+        log:printInfo("about to save order", orderId = orderId);
         error? saved = saveOrder(fresh);
+        log:printInfo("saveOrder returned", orderId = orderId);
         if saved is error {
             log:printError("failed to persist order", saved, orderId = orderId);
             return <http:InternalServerError>{
@@ -50,7 +50,6 @@ service /api/v1 on new http:Listener(SERVICE_PORT) {
         return <http:Created>{body: fresh};
     }
 
-    // Lists orders. Filtering is optional and additive.
     resource function get orders(string? customerId, string? status) returns OrderListResponse|http:InternalServerError {
         Order[]|error found = listOrders(customerId, status);
         if found is error {
@@ -62,7 +61,6 @@ service /api/v1 on new http:Listener(SERVICE_PORT) {
         return {items: found, total: found.length()};
     }
 
-    // Fetches one order with its full audit trail.
     resource function get orders/[string orderId]() returns Order|http:NotFound|http:InternalServerError {
         Order?|error found = findOrder(orderId);
         if found is error {
@@ -79,11 +77,6 @@ service /api/v1 on new http:Listener(SERVICE_PORT) {
         return found;
     }
 
-    // Cancels an order. Publishes orders.cancelled so payment can refund,
-    // the restaurant can restore stock, and delivery can release a driver.
-    //
-    // The transition table rejects the cancel if the order has already left
-    // the restaurant, which is what stops a delivered order being cancelled.
     resource function post orders/[string orderId]/cancel(@http:Payload CancelOrderRequest req) returns Order|http:NotFound|http:Conflict|http:InternalServerError {
         Order?|error maybeOrder = findOrder(orderId);
         if maybeOrder is error {
@@ -129,9 +122,4 @@ service /api/v1 on new http:Listener(SERVICE_PORT) {
         log:printInfo("order cancelled", orderId = orderId, reason = req.reason);
         return updated;
     }
-}
-
-// Called once at service startup. Launches the three consumer groups.
-function init() returns error? {
-    return startConsumers();
 }

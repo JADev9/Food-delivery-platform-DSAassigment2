@@ -112,21 +112,3 @@ public function computeTotal(PlaceOrderItem[] items) returns decimal {
 //
 // + return - a new UUID v4
 public function newOrderId() returns string => uuid:createType4AsString();
-
-// Builds an OrderEvent from the current state of an order.
-// Used by REST handlers and consumer handlers to publish outgoing events.
-isolated function orderToEvent(Order o, string eventType) returns OrderEvent {
-    return {
-        eventId: newEventId(),
-        eventType: eventType,
-        occurredAt: nowUtc(),
-        orderId: o.orderId,
-        customerId: o.customerId,
-        restaurantId: o.restaurantId,
-        items: o.items,
-        totalAmount: o.totalAmount,
-        status: o.status,
-        deliveryAddress: o.deliveryAddress,
-        reason: o.reason
-    };
-}
