@@ -91,7 +91,159 @@ services:
       retries: 10
       start_period: 15s
 
-  # <<< service blocks are added here >>>
+  # ------------------------------------------------------- services ----
+
+  customer-service:
+    <<: *service-defaults
+    build: ./services/customer-service
+    container_name: customer-service
+    ports: ["8081:8081"]
+    environment:
+      <<: *service-env
+      SERVICE_PORT: "8081"
+      MONGO_DB: customers
+      ORDER_SERVICE_URL: http://order-service:8083
+
+  customer-consumer:
+    <<: *service-defaults
+    build: ./services/customer-consumer
+    container_name: customer-consumer
+    environment:
+      <<: *service-env
+      MONGO_DB: customers
+
+  restaurant-service:
+    <<: *service-defaults
+    build: ./services/restaurant-service
+    container_name: restaurant-service
+    ports: ["8082:8082"]
+    environment:
+      <<: *service-env
+      SERVICE_PORT: "8082"
+      MONGO_DB: restaurants
+      DEFAULT_PREP_MINUTES: "15"
+
+  restaurant-consumer:
+    <<: *service-defaults
+    build: ./services/restaurant-consumer
+    container_name: restaurant-consumer
+    environment:
+      <<: *service-env
+      MONGO_DB: restaurants
+      DEFAULT_PREP_MINUTES: "15"
+
+  order-service:
+    <<: *service-defaults
+    build: ./services/order-service
+    container_name: order-service
+    ports: ["8083:8083"]
+    environment:
+      <<: *service-env
+      SERVICE_PORT: "8083"
+      MONGO_DB: orders
+
+  order-consumer:
+    <<: *service-defaults
+    build: ./services/order-consumer
+    container_name: order-consumer
+    environment:
+      <<: *service-env
+      MONGO_DB: orders
+
+  payment-service:
+    <<: *service-defaults
+    build: ./services/payment-service
+    container_name: payment-service
+    ports: ["8084:8084"]
+    environment:
+      <<: *service-env
+      SERVICE_PORT: "8084"
+      MONGO_DB: payments
+
+  payment-consumer:
+    <<: *service-defaults
+    build: ./services/payment-consumer
+    container_name: payment-consumer
+    environment:
+      <<: *service-env
+      MONGO_DB: payments
+      PAYMENT_DECLINE_ABOVE: "5000"
+      PAYMENT_FAILURE_PERCENT: "0"
+      PAYMENT_LATENCY_MS: "250"
+
+  delivery-service:
+    <<: *service-defaults
+    build: ./services/delivery-service
+    container_name: delivery-service
+    ports: ["8085:8085"]
+    environment:
+      <<: *service-env
+      SERVICE_PORT: "8085"
+      MONGO_DB: deliveries
+      RESTAURANT_SERVICE_URL: http://restaurant-service:8082
+
+  delivery-consumer:
+    <<: *service-defaults
+    build: ./services/delivery-consumer
+    container_name: delivery-consumer
+    environment:
+      <<: *service-env
+      MONGO_DB: deliveries
+      RESTAURANT_SERVICE_URL: http://restaurant-service:8082
+
+  notification-service:
+    <<: *service-defaults
+    build: ./services/notification-service
+    container_name: notification-service
+    ports: ["8086:8086"]
+    environment:
+      <<: *service-env
+      SERVICE_PORT: "8086"
+      MONGO_DB: notifications
+
+  notification-consumer:
+    <<: *service-defaults
+    build: ./services/notification-consumer
+    container_name: notification-consumer
+    environment:
+      <<: *service-env
+      MONGO_DB: notifications
+
+  admin-service:
+    <<: *service-defaults
+    build: ./services/admin-service
+    container_name: admin-service
+    ports: ["8087:8087"]
+    environment:
+      <<: *service-env
+      SERVICE_PORT: "8087"
+      MONGO_DB: adminreports
+
+  admin-consumer:
+    <<: *service-defaults
+    build: ./services/admin-consumer
+    container_name: admin-consumer
+    environment:
+      <<: *service-env
+      MONGO_DB: adminreports
+
+  admin-consumer-kitchen:
+    <<: *service-defaults
+    build: ./services/admin-consumer-kitchen
+    container_name: admin-consumer-kitchen
+    environment:
+      <<: *service-env
+      MONGO_DB: adminreports
+
+  admin-consumer-delivery:
+    <<: *service-defaults
+    build: ./services/admin-consumer-delivery
+    container_name: admin-consumer-delivery
+    environment:
+      <<: *service-env
+      MONGO_DB: adminreports
+
+
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
