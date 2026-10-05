@@ -72,3 +72,5 @@ scripts/.demo-ids
 coverage/
 .nyc_output/
 *.pre-split
+*.balcat
+*.baltmp
