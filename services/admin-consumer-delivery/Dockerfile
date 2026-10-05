@@ -3,7 +3,7 @@ WORKDIR /home/ballerina/app
 COPY --chown=ballerina:ballerina . .
 RUN bal build
 
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:21-jre-jammy
 RUN useradd -r -u 10001 -m appuser
 WORKDIR /app
 COPY --from=build /home/ballerina/app/target/bin/admin_consumer_delivery.jar /app/service.jar
